@@ -1,0 +1,9 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # zbot_stella_n2_velocity_controller:
+    #   type: diff_drive_controller/DiffDriveController
