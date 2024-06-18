@@ -18,7 +18,7 @@ def generate_launch_description():
             PathJoinSubstitution([FindExecutable(name='xacro')]),
             ' ',
             PathJoinSubstitution(
-                [FindPackageShare('zbot_stella_n2_description'), 'urdf', 'main.urdf.xacro']
+                [FindPackageShare('zbot_stella_n2_description'), 'urdf', 'zbot_stella_n2.urdf.xacro']
             )
         ])
     )

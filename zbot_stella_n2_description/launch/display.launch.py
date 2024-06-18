@@ -7,6 +7,7 @@ from launch_ros.substitutions import FindPackageShare
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
+
 def generate_launch_description():
     rviz_config_path = PathJoinSubstitution([FindPackageShare('zbot_stella_n2_description'), 'rviz', 'rviz_config.rviz'])
 
