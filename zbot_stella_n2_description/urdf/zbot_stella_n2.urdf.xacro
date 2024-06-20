@@ -178,5 +178,5 @@
   <!-- Bring in simulation data for Gazebo. -->
   <!-- <xacro:include filename="$(find zbot_stella_n2_description)/urdf/zbot_stella_n2.gazebo" /> -->
 
-  <xacro:include filename="$(find zbot_stella_n2_description)/urdf/zbot_stella_n2.urdf.xacro" />
+  <xacro:include filename="$(find zbot_stella_n2_description)/urdf/accessories.urdf.xacro" />
 </robot>
