@@ -153,21 +153,6 @@
     <child link="ball_caster_link"/>
   </joint>
 
-  <!-- accessories -->
-  <link name="imu_link"></link>
-  <joint name="imu_joint" type="fixed">
-    <origin xyz="${0.025-chassis_length/2} 0 ${chassis_height/2}" rpy="0 0 0"/>
-    <parent link="chassis_link"/>
-    <child link="imu_link"/>
-  </joint>
-
-  <link name="laser_link"></link>
-  <joint name="laser_joint" type="fixed">
-    <origin xyz="${0.045} 0 ${0.135}" rpy="0 0 0"/>
-    <parent link="chassis_link"/>
-    <child link="laser_link"/>
-  </joint>
-
   <!-- ROS2 controls -->
   <ros2_control name="zbot_stella_n2_hardware" type="system">
     <hardware>
@@ -193,5 +178,5 @@
   <!-- Bring in simulation data for Gazebo. -->
   <!-- <xacro:include filename="$(find zbot_stella_n2_description)/urdf/zbot_stella_n2.gazebo" /> -->
 
-
+  <xacro:include filename="$(find zbot_stella_n2_description)/urdf/zbot_stella_n2.urdf.xacro" />
 </robot>
