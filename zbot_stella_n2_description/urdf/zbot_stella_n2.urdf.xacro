@@ -4,7 +4,7 @@
   <!-- https://en.wikipedia.org/wiki/List_of_moments_of_inertia#List_of_3D_inertia_tensors -->
 
   <xacro:arg name="is_sim" default="false"/>
-  <xacro:arg name="gazebo_controllers" default="$(find zbot_stella_n2_control)/config/control.yaml" />
+  <xacro:arg name="gazebo_controllers" default="$(find zbot_stella_n2_control)/config/gazebo_control.yaml" />
 
   <xacro:property name="PI" value="3.1415926535897931"/>
 
@@ -66,7 +66,7 @@
       <axis xyz="0 1 0"/>
     </joint>
 
-    <transmission name="${prefix}_wheel_trans">
+    <!-- <transmission name="${prefix}_wheel_trans">
       <type>transmission_interface/SimpleTransmission</type>
       <joint name="${prefix}_wheel">
         <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
@@ -74,7 +74,7 @@
       <actuator name="${prefix}_actuator">
         <mechanicalReduction>1</mechanicalReduction>
       </actuator>
-    </transmission>
+    </transmission> -->
   </xacro:macro>
 
   <link name="base_link"></link>
@@ -154,6 +154,7 @@
   </joint>
 
   <!-- ROS2 controls -->
+  
   <ros2_control name="zbot_stella_n2_hardware" type="system">
     <hardware>
       <xacro:if value="$(arg is_sim)">
@@ -175,8 +176,34 @@
     </joint>
   </ros2_control>
 
-  <!-- Bring in simulation data for Gazebo. -->
-  <!-- <xacro:include filename="$(find zbot_stella_n2_description)/urdf/zbot_stella_n2.gazebo" /> -->
 
-  <xacro:include filename="$(find zbot_stella_n2_description)/urdf/accessories.urdf.xacro" />
+  
+  <!-- Bring in simulation data for Gazebo. -->
+  <xacro:if value="$(arg is_sim)">
+    <xacro:include filename="$(find zbot_stella_n2_description)/urdf/zbot_stella_n2.gazebo" />
+  </xacro:if>
+  <xacro:unless value="$(arg is_sim)">
+    <xacro:include filename="$(find zbot_stella_n2_description)/urdf/accessories.urdf.xacro" />
+  </xacro:unless>
 </robot>
+
+
+  <!-- <ros2_control name="GazeboSystem" type="system">
+      <hardware>
+          <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+      </hardware>
+      <joint name="left_wheel_joint">
+          <command_interface name="velocity">
+
+          </command_interface>
+          <state_interface name="position" />
+          <state_interface name="velocity" />
+      </joint>
+      <joint name="right_wheel_joint">
+          <command_interface name="velocity">
+
+          </command_interface>
+          <state_interface name="velocity" />
+          <state_interface name="position" />
+      </joint>
+  </ros2_control> -->

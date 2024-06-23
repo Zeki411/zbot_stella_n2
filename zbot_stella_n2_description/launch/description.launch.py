@@ -7,10 +7,11 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
 
-    namespace_declare = DeclareLaunchArgument('namespace', default_value='', description='Namespace of the robot')
-    use_sim_time_declare = DeclareLaunchArgument('use_sim_time', default_value='false', description='Use simulation/Gazebo clock')
-
-    namespace = LaunchConfiguration('namespace')
+    declare_use_sim_time_argument = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation/Gazebo clock'
+    )
     use_sim_time = LaunchConfiguration('use_sim_time')
 
     robot_description_content = ParameterValue(
@@ -19,7 +20,9 @@ def generate_launch_description():
             ' ',
             PathJoinSubstitution(
                 [FindPackageShare('zbot_stella_n2_description'), 'urdf', 'zbot_stella_n2.urdf.xacro']
-            )
+            ),
+            ' ',
+            'is_sim:=', use_sim_time
         ])
     )
 
@@ -27,18 +30,17 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='screen',    
-        namespace=namespace,
+        namespace='',
         parameters=[{
-            'use_sim_time': use_sim_time,
-            'robot_description': robot_description_content
+            'robot_description': robot_description_content,
+            'use_sim_time': use_sim_time
         }],
     )
 
 
     ld = LaunchDescription()
-    ld.add_action(namespace_declare)
-    ld.add_action(use_sim_time_declare)
-
+    ld.add_action(declare_use_sim_time_argument)
     ld.add_action(robot_state_publisher_node)
+    
 
     return ld
