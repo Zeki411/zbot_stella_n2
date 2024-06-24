@@ -9,7 +9,7 @@ from launch.event_handlers import OnProcessExit
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    gazebo_world_config = PathJoinSubstitution([FindPackageShare('zbot_stella_n2_gazebo'), 'worlds', 'obstacles.world'])
+    gazebo_world_config = PathJoinSubstitution([FindPackageShare('zbot_stella_n2_gazebo'), 'worlds', 'no_roof_small_warehouse.world'])
    
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -40,7 +40,7 @@ def generate_launch_description():
         launch_arguments={
             'x': '0',
             'y': '0',
-            'z': '0',
+            'z': '0.1',
         }.items()
     )
 

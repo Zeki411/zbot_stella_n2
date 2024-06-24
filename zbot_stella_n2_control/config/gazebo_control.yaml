@@ -17,7 +17,8 @@ zbot_stella_n2_velocity_controller:
     wheel_separation: 0.186
     wheel_radius: 0.033
 
-    # odom_frame_id: odom
-    base_frame_id: base_link
+    odom_frame_id: odom
+    base_frame_id: base_footprint
+    enable_odom_tf: false
 
     use_stamped_vel: false

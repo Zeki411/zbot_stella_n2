@@ -9,7 +9,16 @@ import launch.actions
 from launch.actions import DeclareLaunchArgument
 
 def generate_launch_description():
+
+    declare_use_sim_time_argument = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation/Gazebo clock'
+    )
+    use_sim_time = launch.actions.LaunchConfiguration('use_sim_time')
+
     return LaunchDescription([
+        declare_use_sim_time_argument,
         launch_ros.actions.Node(
             package='robot_localization',
             executable='ekf_node',
@@ -17,7 +26,7 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 os.path.join(get_package_share_directory("zbot_stella_n2_localization"), 'params', 'ekf.yaml'),
-                {"use_sim_time": False},
+                {"use_sim_time": use_sim_time},
             ],
            ),
-])
+    ])

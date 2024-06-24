@@ -4,13 +4,17 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
-from launch.event_handlers import OnProcessExit
+from ament_index_python.packages import get_package_share_directory
+import os
 
 
 
 
 
 def generate_launch_description():
+    imu_filter_params = os.path.join(get_package_share_directory('zbot_stella_n2_gazebo'),
+                                        'params', 'gazebo_imu_filter.yaml')
+        
     declare_robot_name = DeclareLaunchArgument('robot_name', default_value='stella_n2', description='Name of the robot to be spawned')
     
     # Declare launch arguments for robot name and initial XYZ position
@@ -68,11 +72,33 @@ def generate_launch_description():
         ),
 
     ])
-    
+
+    # imu filter
+    imu_madgwick_filter_node = Node(
+        package='imu_filter_madgwick',
+        executable='imu_filter_madgwick_node',
+        name='imu_filter_node',
+        output='screen',
+        parameters=[
+            imu_filter_params,
+            {'use_sim_time': 'true'},
+        ],
+    )
+
+    robot_localization_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[
+            os.path.join(get_package_share_directory("zbot_stella_n2_gazebo"), 'params', 'gazebo_ekf.yaml'),
+            {"use_sim_time": True},
+        ],
+    )
 
     # load control
     spawn_control_timer_action = TimerAction(
-        period=2.0,
+        period=5.0,
         actions=[
             Node(
                 package='controller_manager',
@@ -103,6 +129,8 @@ def generate_launch_description():
     ld.add_action(robot_description_launch)
     ld.add_action(spawn_robot_node)
     ld.add_action(teleop_group_action)
+    ld.add_action(imu_madgwick_filter_node)
+    ld.add_action(robot_localization_node)
     ld.add_action(spawn_control_timer_action)
 
     # ld.add_action(
