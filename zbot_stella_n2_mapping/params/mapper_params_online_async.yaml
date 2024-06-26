@@ -27,6 +27,7 @@ slam_toolbox:
     tf_buffer_duration: 30.
     stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
     enable_interactive_mode: true
+    publis_tf: true
 
     # General Parameters
     use_scan_matching: true

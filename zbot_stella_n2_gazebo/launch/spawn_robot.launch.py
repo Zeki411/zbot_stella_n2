@@ -94,6 +94,9 @@ def generate_launch_description():
             os.path.join(get_package_share_directory("zbot_stella_n2_gazebo"), 'params', 'gazebo_ekf.yaml'),
             {"use_sim_time": True},
         ],
+        remappings=[
+            ('/odometry/filtered', '/odom'),
+        ]
     )
 
     # load control

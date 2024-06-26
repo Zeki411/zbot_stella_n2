@@ -6,14 +6,10 @@ twist_mux:
         topic   : joy_teleop/cmd_vel
         timeout : 0.5
         priority: 10
-      # interactive_marker:
-      #   topic   : twist_marker_server/cmd_vel
-      #   timeout : 0.5
-      #   priority: 8
-      # external:
-      #   topic   : cmd_vel
-      #   timeout : 0.5
-      #   priority: 1
+      external:
+        topic   : cmd_vel
+        timeout : 0.5
+        priority: 1
     locks:
       e_stop:
         topic   : e_stop
