@@ -4,8 +4,6 @@ from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-import launch.actions
-from launch.actions import DeclareLaunchArgument
 import os
 
 def generate_launch_description():
@@ -19,15 +17,14 @@ def generate_launch_description():
     )
     use_sim_time = LaunchConfiguration('use_sim_time')
 
-
     nav2_bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_file_dir, 'launch', 'navigation.launch.py')
         ),
         launch_arguments={
-            # 'map': os.path.join(nav2_file_dir, 'map', 'map.yaml'),
             'use_sim_time': use_sim_time,
-            'params_file': os.path.join(nav2_file_dir, 'params', param_file_name)}.items(),
+            'params_file': os.path.join(nav2_file_dir, 'params', param_file_name)
+        }.items(),
     )
 
     return LaunchDescription([

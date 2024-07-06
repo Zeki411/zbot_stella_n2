@@ -81,7 +81,7 @@ def generate_launch_description():
         output='screen',
         parameters=[
             imu_filter_params,
-            {'use_sim_time': 'true'},
+            {"use_sim_time": True},
         ],
     )
 
