@@ -1,14 +1,8 @@
-import rclpy
-from rclpy.node import Node
-from nav_msgs.msg import OccupancyGrid
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy, QoSHistoryPolicy
-import matplotlib.pyplot as plt
-import numpy as np
-from nav2_simple_commander.robot_navigator import BasicNavigator
 from enum import Enum
-from visualization_msgs.msg import Marker, MarkerArray
+import numpy as np
+from .abstract_frontier_detection import FrontierDetection
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Point, Quaternion
 
 OCC_THRESHOLD = 10 # Threshold for occupied cells
 MIN_FRONTIER_SIZE = 5 
@@ -55,7 +49,7 @@ class OccupancyGrid2d():
 
     def __getIndex(self, mx, my):
         return my * self.map.info.width + mx
-    
+
 class PointClassification(Enum):
     MapOpen = 1
     MapClosed = 2
@@ -66,7 +60,7 @@ class FrontierPoint():
     def __init__(self, x, y):
         self.classification = 0
         self.mapX = x
-        self.mapY = y
+        self.mapY = y   
 
 class FrontierCache():
     """
@@ -92,126 +86,61 @@ class FrontierCache():
     def clear(self):
         self.cache = {}
 
-class WavefrontFrontierExplorer(Node):
-    def __init__(self):
-        super().__init__('wavefront_frontier_explorer')
-        self.get_logger().info('WavefrontFrontierExplorer initialized')
 
+class WavefrontFrontierDetection(FrontierDetection):
+    def __init__(self, params=None):
+        super(WavefrontFrontierDetection, self).__init__(params)
 
-        self.frontier_marker_pub = self.create_publisher(
-            MarkerArray, '/frontier_markers', QoSProfile(depth=1)
-        )
-
-        # Subscribe to the /map topic
-        self.slam_map_sub = self.create_subscription(
-            OccupancyGrid, '/map', self.slam_map_callback, 
-            QoSProfile(
-                durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
-                reliability=QoSReliabilityPolicy.RELIABLE,
-                history=QoSHistoryPolicy.KEEP_LAST,
-                depth=1
-            )
-        )
-
-        self.
-
-        # self.navigator = BasicNavigator('basic_navigator')
-
-        self.slam_map = None
-        self.frontiers = []
-        self.fCache = FrontierCache() # Cache for frontier points
-        
-        self.current_pose = Pose # Current robot pose
-
-    def slam_map_callback(self, msg):
-        self.slam_map = OccupancyGrid2d(msg)
-
-    def __get_neighbours(self, point):
-        # Get neighbors of a point
-        neighbors = []
-
-        for x in range(point.mapX - 1, point.mapX + 2):
-            for y in range(point.mapY - 1, point.mapY + 2):
-                if (x > 0 and x < self.slam_map.getSizeX() and y > 0 and y < self.slam_map.getSizeY()):
-                    neighbors.append(self.fCache.getPoint(x, y))
-
-        return neighbors
+        self.fCache = FrontierCache()
+        self.update_pose(pose=Pose(
+            position=Point(x=0.0, y=0.0, z=0.0),
+            orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
+        ))
     
-    def __find_free_point(self, mx, my):
-
-        bfs_queue = [self.fCache.getPoint(mx, my)] # Breadth-first search queue
-
-        while len(bfs_queue) > 0:
-            loc = bfs_queue.pop(0)
-            if self.slam_map.getCost(loc.mapX, loc.mapY) == OccupancyGrid2d.CostValues.FreeSpace.value:
-                return (loc.mapX, loc.mapY)
-            
-            for n in self.__get_neighbours(loc):
-                if n.classification & PointClassification.MapClosed.value == 0:
-                    n.classification = n.classification | PointClassification.MapClosed.value
-                    bfs_queue.append(n)
-        
-        return (mx, my)
-    
-    def is_frontier_point(self, point):
+    def get_frontiers(self):
         """
-        Check if a point is a frontier point.
-        A frontier point is a point that is adjacent to an unknown cell.
+        Get frontiers in the map.
+        
+        :return: A list of frontiers.
         """
-        if self.slam_map.getCost(point.mapX, point.mapY) != OccupancyGrid2d.CostValues.NoInformation.value:
-            return False
+        if self.map_data is None:
+            raise ValueError('Map data is not set.')
         
-        has_free = False
-        for n in self.__get_neighbours(point):
-            cost = self.slam_map.getCost(n.mapX, n.mapY)
-
-            if cost > OCC_THRESHOLD:
-                return False
-            
-            if cost == OccupancyGrid2d.CostValues.FreeSpace.value:
-                has_free = True
-
-        return has_free
-    
-    def __get_centroid(self, arr):
-        arr = np.array(arr)
-        length = arr.shape[0]
-        sum_x = np.sum(arr[:, 0])
-        sum_y = np.sum(arr[:, 1])
-        return sum_x/length, sum_y/length
-
-    def __get_frontier(self):
-        
-        self.fCache.clear()
         frontiers = []
+        self.fCache.clear()
 
-        mx, my = self.slam_map.worldToMap(
+        mx, my = self.map_data.worldToMap(
             self.current_pose.position.x, self.current_pose.position.y
-        ) # get robot position in map coordinates
+        ) # get robot position in map cell coordinates
 
-        free_point = self.__find_free_point(mx, my)
+        # Find a free point to start the search
+        free_point = self.__find_free_point(mx, my) 
         start_point = self.fCache.get_point(free_point[0], free_point[1])
         start_point.classification = PointClassification.MapOpen.value
         map_point_queue = [start_point] # Queue for outer breadth-first search
 
+        # outer bfs to find first frontier point from starting point
         while len(map_point_queue) > 0:
+            # outer bfs
             p = map_point_queue.pop(0) 
 
             if p.classification & PointClassification.MapClosed.value != 0: # Skip if point is already closed
                 continue
 
-            if self.is_frontier_point(p):
+            if self.__is_frontier_point(p):
                 p.classification = p.classification | PointClassification.FrontierOpen.value
                 frontier_queue = [p] # Queue for inner breadth-first search
                 new_frontier = []
 
+                # inner bfs to check if the neighbours point of outer bfs frontier point is frontier point or not
                 while len(frontier_queue) > 0:
+                    # inner bfs
                     fpoint = frontier_queue.pop(0)
 
                     if fpoint.classification & (PointClassification.MapClosed.value | PointClassification.FrontierClosed.value) != 0:
                         continue
 
-                    if self.is_frontier_point(fpoint):
+                    if self.__is_frontier_point(fpoint):
                         new_frontier.append(fpoint)
 
                         for w in self.__get_neighbours(fpoint):
@@ -221,43 +150,83 @@ class WavefrontFrontierExplorer(Node):
                                 w.classification = w.classification | PointClassification.FrontierOpen.value
                                 frontier_queue.append(w)
 
-                    fpoint.classification = fpoint.classification | PointClassification.FrontierClosed.value
+                    fpoint.classification = fpoint.classification | PointClassification.FrontierClosed.value # mark as dequed
                 
                 new_frontier_cords = []
                 for x in new_frontier:
                     x.classification = x.classification | PointClassification.MapClosed.value
-                    new_frontier_cords.append(self.slam_map.mapToWorld(x.mapX, x.mapY))
-                
+                    new_frontier_cords.append(self.map_data.mapToWorld(x.mapX, x.mapY))
+
                 if len(new_frontier) > MIN_FRONTIER_SIZE: 
                     frontiers.append(self.__get_centroid(new_frontier_cords))
 
             # outer bfs
             for v in self.__get_neighbours(p):
                 if v.classification & (PointClassification.MapOpen.value | PointClassification.MapClosed.value) == 0:
-                    if any(self.slam_map.getCost(x.mapX, x.mapY) == OccupancyGrid2d.CostValues.FreeSpace.value for x in self.__get_neighbours(v)):
+                    if any(self.map_data.getCost(x.mapX, x.mapY) == OccupancyGrid2d.CostValues.FreeSpace.value for x in self.__get_neighbours(v)):
                         v.classification = v.classification | PointClassification.MapOpen.value
                         map_point_queue.append(v)
 
-            p.classification = p.classification | PointClassification.MapClosed.value
-    
+            p.classification = p.classification | PointClassification.MapClosed.value # mark as dequed
+        
         return frontiers
+        
+    def __get_centroid(self, arr):
+        arr = np.array(arr)
+        length = arr.shape[0]
+        sum_x = np.sum(arr[:, 0])
+        sum_y = np.sum(arr[:, 1])
+        return sum_x/length, sum_y/length
 
+    def __get_neighbours(self, point):
+        # Get neighbors of a point
+        neighbors = []
 
+        for x in range(point.mapX - 1, point.mapX + 2):
+            for y in range(point.mapY - 1, point.mapY + 2):
+                if (x > 0 and x < self.map_data.getSizeX() and y > 0 and y < self.map_data.getSizeY()):
+                    neighbors.append(self.fCache.get_point(x, y))
+
+        return neighbors
+
+    def __is_frontier_point(self, point):
+        """
+        Check if a point is a frontier point.
+        A frontier point is a point that is adjacent to an unknown cell.
+        """
+        if self.map_data.getCost(point.mapX, point.mapY) != OccupancyGrid2d.CostValues.NoInformation.value:
+            return False
+        
+        has_free = False
+        for n in self.__get_neighbours(point):
+            cost = self.map_data.getCost(n.mapX, n.mapY)
+
+            if cost > OCC_THRESHOLD:
+                return False
+            
+            if cost == OccupancyGrid2d.CostValues.FreeSpace.value:
+                has_free = True
+
+        return has_free
 
         
+    def __find_free_point(self, mx, my):
+
+        bfs_queue = [self.fCache.get_point(mx, my)] # Breadth-first search queue
+
+        while len(bfs_queue) > 0:
+            loc = bfs_queue.pop(0)
+            if self.map_data.getCost(loc.mapX, loc.mapY) == OccupancyGrid2d.CostValues.FreeSpace.value:
+                return (loc.mapX, loc.mapY)
+            
+            for n in self.__get_neighbours(loc):
+                if n.classification & PointClassification.MapClosed.value == 0:
+                    n.classification = n.classification | PointClassification.MapClosed.value
+                    bfs_queue.append(n)
+        
+        return (mx, my)
 
     
-    
-
-
 
     
 
-def main():
-    rclpy.init()
-    node = WavefrontFrontierExplorer()
-    rclpy.spin(node)
-    rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()

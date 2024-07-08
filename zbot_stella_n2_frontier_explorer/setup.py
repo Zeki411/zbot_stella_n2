@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'wavefront_frontier_explorer = zbot_stella_n2_frontier_explorer.wavefront_frontier_explorer:main',
+            'frontier_explorer = zbot_stella_n2_frontier_explorer.frontier_explorer:main',
         ],
     },
 )
