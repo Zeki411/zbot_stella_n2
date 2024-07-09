@@ -65,6 +65,9 @@ class FrontierExplorer(Node):
 
         self._process_next_frontier = True
 
+        self.aborted_frontiers = []
+        self.current_target_frontier = None
+
         # Allow some time for all nodes to start up and broadcast their frames
         time.sleep(5)
 
@@ -97,6 +100,7 @@ class FrontierExplorer(Node):
         status = future.result().status
         if status == GoalStatus.STATUS_ABORTED:
             self.get_logger().error('Goal failed with status: ABORTED')
+            self.aborted_frontiers.append(self.current_target_frontier) # Add the frontier to the aborted list
         elif status == GoalStatus.STATUS_SUCCEEDED:
             self.get_logger().info('Goal succeeded!')
         elif status == GoalStatus.STATUS_CANCELED:
@@ -194,6 +198,10 @@ class FrontierExplorer(Node):
         frontiers = self.frontier_detector.get_frontiers()
         self.get_logger().info(f'Found {len(frontiers)} frontiers.')
 
+        if not frontiers:
+            self.get_logger().info('No frontiers found')
+            return
+
         # Create and publish marker for all frontiers
         frontier_marker = Marker()
         frontier_marker.header.frame_id = 'map'
@@ -219,39 +227,47 @@ class FrontierExplorer(Node):
 
         # Find the closest frontier
         frontier_distance = []
-        closest_frontier = None
         for frontier in frontiers:
             frontier = np.array(frontier)
             robot_position = np.array([self.frontier_detector.current_pose.position.x, self.frontier_detector.current_pose.position.y])
             frontier_distance.append(np.linalg.norm(frontier - robot_position))
 
-        if frontiers:
-            closest_frontier = frontiers[np.argmin(frontier_distance)]
-            self.get_logger().info(f'Closest frontier is at {closest_frontier}')
+        # sort frontiers by distance
+        sorted_frontiers = [frontier for _, frontier in sorted(zip(frontier_distance, frontiers))]
 
-            # Create and publish marker for the closest frontier
-            closest_frontier_marker = Marker()
-            closest_frontier_marker.header.frame_id = 'map'
-            closest_frontier_marker.header.stamp = self.get_clock().now().to_msg()
-            closest_frontier_marker.ns = 'closest_frontier'
-            closest_frontier_marker.id = 1
-            closest_frontier_marker.type = Marker.SPHERE
-            closest_frontier_marker.action = Marker.ADD
-            closest_frontier_marker.pose.orientation.w = 1.0
-            closest_frontier_marker.scale.x = 0.2
-            closest_frontier_marker.scale.y = 0.2
-            closest_frontier_marker.scale.z = 0.2
-            closest_frontier_marker.color.g = 1.0
-            closest_frontier_marker.color.r = 0.0
-            closest_frontier_marker.color.b = 0.0
-            closest_frontier_marker.color.a = 1.0
+        # Find the closest frontier that is not in the aborted list
+        for frontier in sorted_frontiers:
+            if frontier in self.aborted_frontiers:
+                continue
+            self.current_target_frontier = frontier
+            break
 
-            point = Point()
-            point.x = float(closest_frontier[0])
-            point.y = float(closest_frontier[1])
-            point.z = 0.0  # Ensure z is set
-            closest_frontier_marker.pose.position = point
-            self.frontier_marker_pub.publish(closest_frontier_marker)
+        self.get_logger().info(f'Closest frontier not aborted is at {self.current_target_frontier}')
+
+        # Create and publish marker for the closest frontier
+        closest_frontier_marker = Marker()
+        closest_frontier_marker.header.frame_id = 'map'
+        closest_frontier_marker.header.stamp = self.get_clock().now().to_msg()
+        closest_frontier_marker.id = 1
+        closest_frontier_marker.type = Marker.SPHERE
+        closest_frontier_marker.action = Marker.ADD
+        closest_frontier_marker.pose.orientation.w = 1.0
+        closest_frontier_marker.scale.x = 0.2
+        closest_frontier_marker.scale.y = 0.2
+        closest_frontier_marker.scale.z = 0.2
+        closest_frontier_marker.color.g = 1.0
+        closest_frontier_marker.color.r = 0.0
+        closest_frontier_marker.color.b = 0.0
+        closest_frontier_marker.color.a = 1.0
+
+        closest_frontier_marker.pose.position = Point(
+            x=float(self.current_target_frontier[0]), 
+            y=float(self.current_target_frontier[1]), 
+            z=0.0
+        )
+        self.frontier_marker_pub.publish(closest_frontier_marker)
+
+
         
         current_pose_marker = Marker()
         current_pose_marker.header.frame_id = 'map'
@@ -274,18 +290,18 @@ class FrontierExplorer(Node):
         current_pose_marker.pose.position = current_pose_point
         self.frontier_marker_pub.publish(current_pose_marker)
 
-        if closest_frontier is not None:
+        if self.current_target_frontier is not None:
             # Send the robot to the closest frontier
             goal_pose = PoseStamped()
             goal_pose.header.frame_id = 'map'
             goal_pose.header.stamp = self.get_clock().now().to_msg()
-            goal_pose.pose.position.x = closest_frontier[0]
-            goal_pose.pose.position.y = closest_frontier[1]
+            goal_pose.pose.position.x = self.current_target_frontier[0]
+            goal_pose.pose.position.y = self.current_target_frontier[1]
             goal_pose.pose.position.z = 0.0
-            goal_pose.pose.orientation.x = 0.0
-            goal_pose.pose.orientation.y = 0.0
-            goal_pose.pose.orientation.z = 0.0
-            goal_pose.pose.orientation.w = 1.0
+            goal_pose.pose.orientation.x = self.frontier_detector.current_pose.orientation.x
+            goal_pose.pose.orientation.y = self.frontier_detector.current_pose.orientation.y
+            goal_pose.pose.orientation.z = self.frontier_detector.current_pose.orientation.z
+            goal_pose.pose.orientation.w = self.frontier_detector.current_pose.orientation.w
             
 
             self.__send_goal(goal_pose)

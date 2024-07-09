@@ -175,7 +175,7 @@ global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: True
-      enabled: False
+      enabled: True
       update_frequency: 1.0
       publish_frequency: 1.0
       global_frame: map

@@ -5,7 +5,7 @@ from .abstract_frontier_detection import FrontierDetection
 from geometry_msgs.msg import Pose, Point, Quaternion
 
 OCC_THRESHOLD = 10 # Threshold for occupied cells
-MIN_FRONTIER_SIZE = 5 
+MIN_FRONTIER_SIZE = 20
 
 class OccupancyGrid2d():
     class CostValues(Enum):
