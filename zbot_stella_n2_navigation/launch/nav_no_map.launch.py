@@ -4,33 +4,59 @@ from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-import launch.actions
-from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
+from launch_ros.actions import Node
 import os
 
 def generate_launch_description():
-    nav2_file_dir = get_package_share_directory('zbot_stella_n2_navigation')
-    param_file_name = 'nav2_2d_no_map_params.yaml'
+    zbot_nav2_file_dir = get_package_share_directory('zbot_stella_n2_navigation')
+    param_file_name = 'nav2_no_map_params.yaml'
 
     declare_use_sim_time_argument = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
         description='Use simulation/Gazebo clock'
     )
-    use_sim_time = LaunchConfiguration('use_sim_time')
 
+    declare_use_rviz_argument = DeclareLaunchArgument(
+        'use_rviz',
+        default_value='false',
+        description='Whether to launch RViz'
+    )
+
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    use_rviz = LaunchConfiguration('use_rviz')
 
     nav2_bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(nav2_file_dir, 'launch', 'navigation.launch.py')
+            os.path.join(zbot_nav2_file_dir, 'launch', 'navigation.launch.py')
         ),
         launch_arguments={
-            # 'map': os.path.join(nav2_file_dir, 'map', 'map.yaml'),
             'use_sim_time': use_sim_time,
-            'params_file': os.path.join(nav2_file_dir, 'params', param_file_name)}.items(),
+            'params_file': os.path.join(zbot_nav2_file_dir, 'params', param_file_name)
+        }.items(),
     )
+
+    rviz_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(zbot_nav2_file_dir, 'launch', 'rviz.launch.py')
+        ),
+        condition=IfCondition(use_rviz)
+    )
+
+    tf2_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=['0', '0', '0', '0', '0', '0', 'odom', 'map'],
+        parameters=[{'use_sim_time': use_sim_time}],
+        # remappings=[('tf', 'tf')],
+    )
+    
 
     return LaunchDescription([
         declare_use_sim_time_argument,
+        declare_use_rviz_argument,
         nav2_bringup_launch,
+        rviz_launch,
+        tf2_node
     ])
