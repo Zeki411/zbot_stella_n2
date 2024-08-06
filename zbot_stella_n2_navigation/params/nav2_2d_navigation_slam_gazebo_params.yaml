@@ -104,16 +104,16 @@ controller_server:
       min_vel_y: 0.0
       max_vel_x: 0.1
       max_vel_y: 0.0
-      max_vel_theta: 0.5  # Increased for faster rotation
+      max_vel_theta: 0.15  # Increased for faster rotation
       min_speed_xy: 0.0
       max_speed_xy: 0.26
       min_speed_theta: 0.0
       acc_lim_x: 2.5
       acc_lim_y: 0.0
-      acc_lim_theta: 4.0  # Increased for quicker acceleration during rotation
+      acc_lim_theta: 2.0  # Increased for quicker acceleration during rotation
       decel_lim_x: -2.5
       decel_lim_y: 0.0
-      decel_lim_theta: -4.0  # Matching deceleration to acceleration
+      decel_lim_theta: -2.0  # Matching deceleration to acceleration
       vx_samples: 30  # Increased sample size for better path options
       vy_samples: 5
       vtheta_samples: 30  # Increased sample size for better rotation options

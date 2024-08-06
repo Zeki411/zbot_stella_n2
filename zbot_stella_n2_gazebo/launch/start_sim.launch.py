@@ -11,7 +11,8 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     gazebo_world_config = PathJoinSubstitution([FindPackageShare('zbot_stella_n2_gazebo'), 
                                                 'worlds', 
-                                                'turtlebot3_house.world'])
+                                                'baylands.world'])
+                                                #'turtlebot3_world.world'])
    
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -42,7 +43,7 @@ def generate_launch_description():
         launch_arguments={
             'x': '0',
             'y': '0',
-            'z': '0.0',
+            'z': '1.0',
         }.items()
     )
 
