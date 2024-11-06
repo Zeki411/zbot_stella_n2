@@ -107,5 +107,15 @@
     <origin xyz="${0.025-chassis_length/2} 0 ${chassis_height/2 + 0.095}" rpy="0 0 0"/>
   </joint>
 
+  <!-- uwb tag -->
+  <link name="uwb_tag_link">
+  </link>
+
+  <joint name="uwb_tag_joint" type="fixed">
+    <parent link="chassis_link"/>
+    <child link="uwb_tag_link"/>
+    <origin xyz="${0.025-chassis_length/2} 0 ${chassis_height/2 + 0.015 + 0.22}" rpy="0 0 0"/>
+  </joint>
+
 
 </robot>
